@@ -3,6 +3,7 @@ import { Archivo, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import Cursor from "../components/Cursor";
 import Preloader from "../components/Preloader";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const grotesk = Archivo({
   variable: "--font-grotesk",
@@ -66,6 +67,7 @@ export default function RootLayout({
         {children}
         <Preloader />
         <Cursor />
+        <SpeedInsights />
       </body>
     </html>
   );
