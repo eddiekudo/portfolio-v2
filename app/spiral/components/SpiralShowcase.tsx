@@ -206,6 +206,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   const shaderScrollSpeedRef = useRef<number>(0)
   const scrollSpeedRef = useRef<number>(0)
   const prefersReducedMotionRef = useRef<boolean>(false)
+  const isMobileRef = useRef<boolean>(false)
 
   // Touch pointer tracking
   const activePointerIdRef = useRef<number | null>(null)
@@ -324,12 +325,18 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     state.hoverProgress = THREE.MathUtils.lerp(state.hoverProgress, state.hoverTarget, hoverEase)
     state.hiddenProgress = THREE.MathUtils.lerp(state.hiddenProgress, state.hiddenTarget, hiddenEase)
 
+    const isMobile = isMobileRef.current
+    const adjustedConfig = {
+      ...spiralConfig,
+      centerOffsetY: isMobile ? -0.2 : spiralConfig.centerOffsetY
+    }
+
     const transform = getPlaneTransform(
       index,
       currentOffsetRef.current,
       meshesRef.current.length,
       state.hiddenProgress,
-      spiralConfig
+      adjustedConfig
     )
     const hiddenDirection = state.isHidden ? 1.5 : -1.5
 
@@ -404,15 +411,15 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     if (!renderer || !camera || !host) return
 
     const rect = host.getBoundingClientRect()
-    const { height, width } = getCanvasViewportSize(rect, {
-      height: window.innerHeight,
-      width: window.innerWidth
-    })
+    const width = rect.width
+    const height = rect.height
     camera.aspect = width / Math.max(height, 1)
 
-    const isMobile = width < 900
+    const isMobile = width < 768
+    isMobileRef.current = isMobile
+
     camera.fov = isMobile ? spiralConfig.mobileFov : spiralConfig.desktopFov
-    const zPos = isMobile ? (spiralConfig.cameraZMobile ?? spiralConfig.cameraZ) : spiralConfig.cameraZ
+    const zPos = isMobile ? 9.5 : spiralConfig.cameraZ
     camera.position.set(0, 0, zPos)
     camera.updateProjectionMatrix()
 
@@ -621,10 +628,6 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     pointerStartXRef.current = event.clientX
     lastPointerXRef.current = event.clientX
     didDragRef.current = false
-
-    if (canvasHost.current) {
-      canvasHost.current.setPointerCapture(event.pointerId)
-    }
   }
 
   const handlePointerMove = (event: React.PointerEvent) => {
@@ -635,15 +638,6 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     if (!didDragRef.current && Math.abs(totalDistance) > spiralConfig.dragThreshold) {
       didDragRef.current = true
     }
-
-    if (!didDragRef.current) return
-
-    const deltaX = event.clientX - lastPointerXRef.current
-    // Swipe/Drag coordinates horizontal drag to scroll the page vertically!
-    // Swiping left (deltaX < 0) scrolls page down (scrollbar moves down)
-    const scrollDeltaY = -deltaX * 2.5
-    window.scrollBy(0, scrollDeltaY)
-    lastPointerXRef.current = event.clientX
   }
 
   const handlePointerUp = (event: React.PointerEvent) => {
@@ -679,11 +673,20 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     const setupFrame = requestAnimationFrame(() => {
       void createScene()
     })
-    window.addEventListener('resize', resize)
+
+    const host = canvasHost.current
+    const resizeObserver = new ResizeObserver(() => {
+      resize()
+    })
+    if (host) {
+      resizeObserver.observe(host)
+    }
 
     return () => {
       cancelAnimationFrame(setupFrame)
-      window.removeEventListener('resize', resize)
+      if (host) {
+        resizeObserver.unobserve(host)
+      }
       cleanupScene()
     }
     // The Three.js scene is intentionally mounted once and synced through refs.
