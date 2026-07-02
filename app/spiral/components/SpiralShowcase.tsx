@@ -3,7 +3,6 @@
 import Image from 'next/image'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  Color,
   DataTexture,
   DoubleSide,
   MathUtils,
@@ -19,9 +18,6 @@ import {
   WebGLRenderer,
 } from 'three'
 import type { Texture } from 'three'
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 import { projects, spiralConfig, type Project } from '../data/projects'
 import {
   createLoopItems,
@@ -33,7 +29,7 @@ import {
 } from '../utils/spiral'
 
 interface SpiralShowcaseProps {
-  scrollProgress: number // Value from 0 to 1 driven by ScrollTrigger
+  scrollProgressRef: React.RefObject<number>
   onProjectClick: (slug: string) => void
 }
 
@@ -152,54 +148,18 @@ const FRAGMENT_SHADER = `
   }
 `
 
-const EDGE_FADE_SHADER = {
-  uniforms: {
-    tDiffuse: { value: null },
-    uFillColor: { value: new Color('#090909') } // Matches page background
-  },
-  vertexShader: `
-    varying vec2 vUv;
-
-    void main() {
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      vUv = uv;
-    }
-  `,
-  fragmentShader: `
-    uniform sampler2D tDiffuse;
-    uniform vec3 uFillColor;
-
-    varying vec2 vUv;
-
-    float remap(float value, float min1, float max1, float min2, float max2) {
-      return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
-    }
-
-    void main() {
-      float bottomFade = clamp(remap(vUv.y, 0.0, 0.2, 1.0, 0.0), 0.0, 1.0);
-      float topFade = clamp(remap(vUv.y, 0.8, 1.0, 0.0, 1.0), 0.0, 1.0);
-      float strength = clamp(topFade + bottomFade, 0.0, 1.0);
-      vec4 textureColor = texture2D(tDiffuse, vUv);
-      vec3 finalColor = mix(textureColor.rgb, uFillColor, strength);
-
-      gl_FragColor = vec4(finalColor, textureColor.a);
-    }
-  `
-}
-
 const setHidden = (mesh: ShowcaseMesh, hidden: boolean) => {
   mesh.userData.isHidden = hidden
   mesh.userData.hiddenTarget = hidden ? 1 : 0
 }
 
-export default function SpiralShowcase({ scrollProgress, onProjectClick }: SpiralShowcaseProps) {
+export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: SpiralShowcaseProps) {
   const canvasHost = useRef<HTMLDivElement>(null)
   const [hoveredProject, setHoveredProject] = useState<Project | null>(null)
   const [webglUnavailable, setWebglUnavailable] = useState(false)
 
   // WebGL references
   const rendererRef = useRef<WebGLRenderer | null>(null)
-  const composerRef = useRef<EffectComposer | null>(null)
   const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<PerspectiveCamera | null>(null)
   const raycasterRef = useRef<Raycaster | null>(null)
@@ -214,9 +174,13 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   const isLoopRunningRef = useRef<boolean>(false)
   const isInViewRef = useRef<boolean>(false)
 
+  // Performance caching refs
+  const hasHoverRef = useRef<boolean>(true)
+  const canvasWidthRef = useRef<number>(0)
+  const canvasRectRef = useRef<DOMRect | null>(null)
+
   // State refs for animation loops
   const ambientOffsetRef = useRef<number>(0)
-  const scrollOffsetRef = useRef<number>(0)
   const easedScrollOffsetRef = useRef<number>(0)
   const currentOffsetRef = useRef<number>(0)
   const shaderScrollSpeedRef = useRef<number>(0)
@@ -231,11 +195,10 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   const pointerRef = useRef<Vector2>(new Vector2(2, 2))
   const didDragRef = useRef<boolean>(false)
 
-  // Map scroll progress (0-1) to our spiral offset index span
+  // Caching the media query states on mount
   useEffect(() => {
-    // Total offset range corresponds to spinning the spiral by projects.length
-    scrollOffsetRef.current = scrollProgress * projects.length
-  }, [scrollProgress])
+    hasHoverRef.current = window.matchMedia('(hover: hover)').matches
+  }, [])
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -268,9 +231,13 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     })
   }
 
-  // Raycaster hover check
+  // Raycaster pointer check
   const updatePointer = (clientX: number, clientY: number) => {
-    const rect = canvasHost.current?.getBoundingClientRect()
+    let rect = canvasRectRef.current
+    if (!rect && canvasHost.current) {
+      rect = canvasHost.current.getBoundingClientRect()
+      canvasRectRef.current = rect
+    }
     if (!rect) return
 
     const pointer = getNormalizedCanvasPointer(clientX, clientY, rect)
@@ -327,7 +294,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   }
 
   const updateHoveredProject = () => {
-    if (window.matchMedia('(hover: none)').matches) {
+    if (!hasHoverRef.current) {
       setHoveredMesh(null)
       return
     }
@@ -384,7 +351,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     previousFrameTimeRef.current = timestamp
 
     // Smoothly interpolate the scroll contribution separately from ambient drift.
-    const targetOffset = scrollOffsetRef.current
+    const targetOffset = (scrollProgressRef.current ?? 0) * projects.length
     const diff = targetOffset - easedScrollOffsetRef.current
     
     // Smooth scroll easing
@@ -401,7 +368,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     )
     ambientOffsetRef.current += getAmbientOffsetDelta(
       deltaMs,
-      renderer.domElement.clientWidth < 900,
+      canvasWidthRef.current < 900,
       prefersReducedMotionRef.current,
       AMBIENT_MOTION
     )
@@ -415,7 +382,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     meshesRef.current.forEach((mesh, index) => updatePlane(mesh, index, deltaMs))
     updateHoveredProject()
     
-    composerRef.current?.render()
+    renderer.render(scene, camera)
     animationFrameRef.current = requestAnimationFrame(animate)
     isLoopRunningRef.current = true
   }
@@ -427,23 +394,24 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     if (!renderer || !camera || !host) return
 
     const rect = host.getBoundingClientRect()
+    canvasRectRef.current = rect
     const width = rect.width
     const height = rect.height
+    canvasWidthRef.current = width
     camera.aspect = width / Math.max(height, 1)
 
     const isMobile = width < 768
     isMobileRef.current = isMobile
+    hasHoverRef.current = window.matchMedia('(hover: hover)').matches
 
     camera.fov = isMobile ? spiralConfig.mobileFov : spiralConfig.desktopFov
     const zPos = isMobile ? 9.5 : spiralConfig.cameraZ
     camera.position.set(0, 0, zPos)
     camera.updateProjectionMatrix()
 
-    const maxDpr = width < 768 ? 1.35 : 2
+    const maxDpr = width < 768 ? 1.0 : 1.5
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr))
     renderer.setSize(width, height, false)
-    composerRef.current?.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr))
-    composerRef.current?.setSize(width, height)
   }
 
   const loadTexture = (loader: TextureLoader, url: string): Promise<Texture> => {
@@ -495,9 +463,6 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     geometryRef.current?.dispose()
     geometryRef.current = null
 
-    composerRef.current?.dispose()
-    composerRef.current = null
-
     rendererRef.current?.dispose()
     rendererRef.current?.domElement.remove()
     rendererRef.current = null
@@ -508,6 +473,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     hoveredMeshRef.current = null
     lastHoveredSlugRef.current = ''
     previousFrameTimeRef.current = 0
+    canvasRectRef.current = null
   }
 
   const createScene = async () => {
@@ -522,10 +488,12 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     sceneRef.current = scene
 
     const initialRect = canvasHost.current.getBoundingClientRect()
+    canvasRectRef.current = initialRect
     const initialSize = getCanvasViewportSize(initialRect, {
       height: window.innerHeight,
       width: window.innerWidth
     })
+    canvasWidthRef.current = initialSize.width
 
     const camera = new PerspectiveCamera(
       spiralConfig.desktopFov,
@@ -558,11 +526,6 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     renderer.domElement.className = 'w-full h-full block'
     canvasHost.current.appendChild(renderer.domElement)
     rendererRef.current = renderer
-
-    const composer = new EffectComposer(renderer)
-    composer.addPass(new RenderPass(scene, camera))
-    composer.addPass(new ShaderPass(EDGE_FADE_SHADER))
-    composerRef.current = composer
 
     const planeGeometry = new PlaneGeometry(1, 1, 8, 8)
     geometryRef.current = planeGeometry
@@ -911,17 +874,21 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
           </div>
         </section>
       ) : (
-        <div
-          ref={canvasHost}
-          className="spiral-stage"
-          role="application"
-          aria-label="Interactive spiral project showcase"
-          onClick={handleCanvasClick}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerCancel}
-        />
+        <div className="relative w-full h-full">
+          <div
+            ref={canvasHost}
+            className="spiral-stage"
+            role="application"
+            aria-label="Interactive spiral project showcase"
+            onClick={handleCanvasClick}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+          />
+          {/* CSS Edge Fade Overlay */}
+          <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-[#090909] via-transparent via-20% to-[#090909] to-80%" />
+        </div>
       )}
 
       {!webglUnavailable && (

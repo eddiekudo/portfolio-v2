@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { gsap, ScrollTrigger } from "../lib/gsap";
 import BackgroundGrid from "../app/spiral/components/BackgroundGrid";
 import { projects } from "../app/spiral/data/projects";
@@ -15,7 +15,7 @@ interface WorkProps {
 export default function Work({ preview = false }: WorkProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const scrollProgressRef = useRef(0);
 
   useEffect(() => {
     if (preview) return;
@@ -63,7 +63,7 @@ export default function Work({ preview = false }: WorkProps) {
           delay: 0.2
         },
         onUpdate: (self) => {
-          setScrollProgress(self.progress);
+          scrollProgressRef.current = self.progress;
         },
       });
 
@@ -112,7 +112,7 @@ export default function Work({ preview = false }: WorkProps) {
         {/* 3D Spiral Showcase Canvas Container */}
         <div className="relative min-h-0 w-full overflow-hidden">
           <SpiralShowcase
-            scrollProgress={scrollProgress}
+            scrollProgressRef={scrollProgressRef}
             onProjectClick={() => {}}
           />
         </div>
