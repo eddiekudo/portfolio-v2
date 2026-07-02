@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import Image from "next/image";
 
 import { createEddieLaptopScene } from "./EddieHero/createEddieLaptopScene";
 import Work from "./Work";
@@ -312,8 +313,14 @@ export default function Hero() {
               <span className="name-label">Aditya</span>
               <span className="avatar-wrapper">
                 <span className="avatar-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/avatar.webp" alt="Aditya" className="avatar-img" />
+                  <Image
+                    src="/avatar.webp"
+                    alt="Aditya"
+                    width={72}
+                    height={72}
+                    className="avatar-img"
+                    priority
+                  />
                 </span>
               </span>
             </span>{" "}
