@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import ImageTrail from "./ImageTrail";
 
-const TOTAL_MS = 5000;
 const REDUCED_MOTION_TOTAL_MS = 900;
 const END_FADE_DELAY_MS = 210;
 
@@ -29,6 +28,14 @@ export default function Preloader() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [isRemoved, setIsRemoved] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMobile(window.innerWidth < 768);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -169,15 +176,48 @@ export default function Preloader() {
       }, END_FADE_DELAY_MS);
     }
 
+    let isPageLoaded = typeof window !== "undefined" && document.readyState === "complete";
+    const handleLoad = () => {
+      isPageLoaded = true;
+    };
+    if (!isPageLoaded) {
+      window.addEventListener("load", handleLoad, { once: true });
+    }
+
+    let currentPercent = 0;
+
     function tick(startTime: number, now: number) {
-      const duration = reduceMotion.matches ? REDUCED_MOTION_TOTAL_MS : TOTAL_MS;
       const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const percent = Math.ceil(progress * 99);
 
-      setColumnState(percent);
+      if (reduceMotion.matches) {
+        const progress = Math.min(elapsed / REDUCED_MOTION_TOTAL_MS, 1);
+        const percent = Math.ceil(progress * 99);
+        setColumnState(percent);
 
-      if (progress < 1) {
+        if (progress < 1) {
+          tickFrame = requestFrame((nextNow) => tick(startTime, nextNow));
+          return;
+        }
+
+        completeLoader();
+        return;
+      }
+
+      const minDuration = 1000;
+      const maxDuration = 3000;
+      const isFinished = isPageLoaded || elapsed >= maxDuration;
+
+      if (isFinished && elapsed >= minDuration) {
+        currentPercent = Math.min(currentPercent + 4, 99);
+      } else {
+        const ratio = Math.min(elapsed / maxDuration, 1);
+        const easeOutRatio = 1 - Math.pow(1 - ratio, 3);
+        currentPercent = Math.min(Math.floor(85 * easeOutRatio), 85);
+      }
+
+      setColumnState(currentPercent);
+
+      if (currentPercent < 99) {
         tickFrame = requestFrame((nextNow) => tick(startTime, nextNow));
         return;
       }
@@ -190,6 +230,7 @@ export default function Preloader() {
     return () => {
       timeoutIds.forEach((timeout) => window.clearTimeout(timeout));
       animationFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+      window.removeEventListener("load", handleLoad);
 
       if (tickFrame) {
         window.cancelAnimationFrame(tickFrame);
@@ -255,7 +296,7 @@ export default function Preloader() {
       <ImageTrail
         containerRef={rootRef}
         images={stickerImages}
-        enabled={!isComplete}
+        enabled={!isComplete && !isMobile}
         className="portfolio-preloader__stickers"
         stickerClass="portfolio-preloader__sticker"
         innerClass="portfolio-preloader__sticker-inner"

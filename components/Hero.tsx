@@ -328,7 +328,7 @@ export default function Hero() {
 
         <div className="transition-handoff">
           <div className="transition-handoff__content">
-            <Work preview={true} />
+            {!isMobile && <Work preview={true} />}
           </div>
         </div>
       </div>

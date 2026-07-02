@@ -2,7 +2,23 @@
 
 import Image from 'next/image'
 import React, { useEffect, useRef, useState } from 'react'
-import * as THREE from 'three'
+import {
+  Color,
+  DataTexture,
+  DoubleSide,
+  MathUtils,
+  Mesh,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Raycaster,
+  Scene,
+  ShaderMaterial,
+  SRGBColorSpace,
+  TextureLoader,
+  Vector2,
+  WebGLRenderer,
+} from 'three'
+import type { Texture } from 'three'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
@@ -33,19 +49,19 @@ type PlaneState = {
 
 type ShowcaseUniforms = {
   uColorStrength: { value: number }
-  uImageSizes: { value: THREE.Vector2 }
-  uPlaneSizes: { value: THREE.Vector2 }
+  uImageSizes: { value: Vector2 }
+  uPlaneSizes: { value: Vector2 }
   uRevealProgress: { value: number }
   uScrollSpeed: { value: number }
-  uTexture: { value: THREE.Texture | null }
+  uTexture: { value: Texture | null }
   uZoom: { value: number }
 }
 
-type ShowcaseMaterial = THREE.ShaderMaterial & {
+type ShowcaseMaterial = ShaderMaterial & {
   uniforms: ShowcaseUniforms
 }
 
-type ShowcaseMesh = THREE.Mesh<THREE.PlaneGeometry, ShowcaseMaterial> & {
+type ShowcaseMesh = Mesh<PlaneGeometry, ShowcaseMaterial> & {
   userData: PlaneState
 }
 
@@ -139,7 +155,7 @@ const FRAGMENT_SHADER = `
 const EDGE_FADE_SHADER = {
   uniforms: {
     tDiffuse: { value: null },
-    uFillColor: { value: new THREE.Color('#090909') } // Matches page background
+    uFillColor: { value: new Color('#090909') } // Matches page background
   },
   vertexShader: `
     varying vec2 vUv;
@@ -182,12 +198,12 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   const [webglUnavailable, setWebglUnavailable] = useState(false)
 
   // WebGL references
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
+  const rendererRef = useRef<WebGLRenderer | null>(null)
   const composerRef = useRef<EffectComposer | null>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const raycasterRef = useRef<THREE.Raycaster | null>(null)
-  const geometryRef = useRef<THREE.PlaneGeometry | null>(null)
+  const sceneRef = useRef<Scene | null>(null)
+  const cameraRef = useRef<PerspectiveCamera | null>(null)
+  const raycasterRef = useRef<Raycaster | null>(null)
+  const geometryRef = useRef<PlaneGeometry | null>(null)
   const animationFrameRef = useRef<number>(0)
   const previousFrameTimeRef = useRef<number>(0)
   const hoveredMeshRef = useRef<ShowcaseMesh | null>(null)
@@ -212,7 +228,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
   const activePointerIdRef = useRef<number | null>(null)
   const pointerStartXRef = useRef<number>(0)
   const lastPointerXRef = useRef<number>(0)
-  const pointerRef = useRef<THREE.Vector2>(new THREE.Vector2(2, 2))
+  const pointerRef = useRef<Vector2>(new Vector2(2, 2))
   const didDragRef = useRef<boolean>(false)
 
   // Map scroll progress (0-1) to our spiral offset index span
@@ -322,8 +338,8 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     const state = mesh.userData
     const hoverEase = 1 - Math.pow(1 - (state.hoverTarget ? 0.09 : 0.07), deltaMs * 0.2)
     const hiddenEase = 1 - Math.pow(1 - 0.05, deltaMs * 0.15)
-    state.hoverProgress = THREE.MathUtils.lerp(state.hoverProgress, state.hoverTarget, hoverEase)
-    state.hiddenProgress = THREE.MathUtils.lerp(state.hiddenProgress, state.hiddenTarget, hiddenEase)
+    state.hoverProgress = MathUtils.lerp(state.hoverProgress, state.hoverTarget, hoverEase)
+    state.hiddenProgress = MathUtils.lerp(state.hiddenProgress, state.hiddenTarget, hiddenEase)
 
     const isMobile = isMobileRef.current
     const adjustedConfig = {
@@ -373,12 +389,12 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     
     // Smooth scroll easing
     easedScrollOffsetRef.current += diff * SCROLL_OFFSET_EASE
-    const targetScrollSpeed = THREE.MathUtils.clamp(
+    const targetScrollSpeed = MathUtils.clamp(
       diff * SCROLL_SPEED_MULTIPLIER,
       -MAX_SHADER_SCROLL_SPEED,
       MAX_SHADER_SCROLL_SPEED
     )
-    scrollSpeedRef.current = THREE.MathUtils.lerp(
+    scrollSpeedRef.current = MathUtils.lerp(
       scrollSpeedRef.current,
       targetScrollSpeed,
       SCROLL_SPEED_EASE
@@ -390,7 +406,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
       AMBIENT_MOTION
     )
     currentOffsetRef.current = easedScrollOffsetRef.current + ambientOffsetRef.current
-    shaderScrollSpeedRef.current = THREE.MathUtils.clamp(
+    shaderScrollSpeedRef.current = MathUtils.clamp(
       scrollSpeedRef.current + (prefersReducedMotionRef.current ? 0 : AMBIENT_SHADER_SCROLL_SPEED),
       -MAX_SHADER_SCROLL_SPEED,
       MAX_SHADER_SCROLL_SPEED
@@ -423,18 +439,19 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     camera.position.set(0, 0, zPos)
     camera.updateProjectionMatrix()
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    const maxDpr = width < 768 ? 1.35 : 2
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr))
     renderer.setSize(width, height, false)
-    composerRef.current?.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    composerRef.current?.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr))
     composerRef.current?.setSize(width, height)
   }
 
-  const loadTexture = (loader: THREE.TextureLoader, url: string): Promise<THREE.Texture> => {
+  const loadTexture = (loader: TextureLoader, url: string): Promise<Texture> => {
     return new Promise((resolve) => {
       loader.load(
         url,
         (texture) => {
-          texture.colorSpace = THREE.SRGBColorSpace
+          texture.colorSpace = SRGBColorSpace
           const maxAniso = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1
           texture.anisotropy = Math.min(maxAniso, 8)
           resolve(texture)
@@ -443,8 +460,8 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
         () => {
           // Fallback texture
           const data = new Uint8Array([24, 24, 24, 255])
-          const texture = new THREE.DataTexture(data, 1, 1)
-          texture.colorSpace = THREE.SRGBColorSpace
+          const texture = new DataTexture(data, 1, 1)
+          texture.colorSpace = SRGBColorSpace
           texture.needsUpdate = true
           resolve(texture)
         }
@@ -464,7 +481,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     clearVisibilityTimers()
 
     const scene = sceneRef.current
-    const textures = new Set<THREE.Texture>()
+    const textures = new Set<Texture>()
     meshesRef.current.forEach((mesh) => {
       if (mesh.material.uniforms.uTexture.value) {
         textures.add(mesh.material.uniforms.uTexture.value)
@@ -501,7 +518,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
       return
     }
 
-    const scene = new THREE.Scene()
+    const scene = new Scene()
     sceneRef.current = scene
 
     const initialRect = canvasHost.current.getBoundingClientRect()
@@ -510,7 +527,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
       width: window.innerWidth
     })
 
-    const camera = new THREE.PerspectiveCamera(
+    const camera = new PerspectiveCamera(
       spiralConfig.desktopFov,
       initialSize.width / Math.max(initialSize.height, 1),
       0.1,
@@ -519,12 +536,12 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     camera.position.set(0, 0, spiralConfig.cameraZ)
     cameraRef.current = camera
 
-    const raycaster = new THREE.Raycaster()
+    const raycaster = new Raycaster()
     raycasterRef.current = raycaster
 
-    let renderer: THREE.WebGLRenderer
+    let renderer: WebGLRenderer
     try {
-      renderer = new THREE.WebGLRenderer({
+      renderer = new WebGLRenderer({
         alpha: true,
         antialias: true,
         powerPreference: 'high-performance',
@@ -536,7 +553,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
       return
     }
 
-    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.outputColorSpace = SRGBColorSpace
     renderer.setClearColor(0x090909, 0) // transparent clear, page bg shows
     renderer.domElement.className = 'w-full h-full block'
     canvasHost.current.appendChild(renderer.domElement)
@@ -547,12 +564,12 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
     composer.addPass(new ShaderPass(EDGE_FADE_SHADER))
     composerRef.current = composer
 
-    const planeGeometry = new THREE.PlaneGeometry(1, 1, 8, 8)
+    const planeGeometry = new PlaneGeometry(1, 1, 8, 8)
     geometryRef.current = planeGeometry
 
     resize()
 
-    const loader = new THREE.TextureLoader()
+    const loader = new TextureLoader()
     const loadedTextures = await Promise.all(
       projects.map((project) => loadTexture(loader, project.thumbnail))
     )
@@ -563,14 +580,14 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
       const texture = loadedTextures[projectIndex]!
       const image = texture.image as { height?: number; width?: number } | undefined
       
-      const material = new THREE.ShaderMaterial({
+      const material = new ShaderMaterial({
         fragmentShader: FRAGMENT_SHADER,
-        side: THREE.DoubleSide,
+        side: DoubleSide,
         transparent: true,
         uniforms: {
           uColorStrength: { value: 0 },
-          uImageSizes: { value: new THREE.Vector2(image?.width ?? 16, image?.height ?? 9) },
-          uPlaneSizes: { value: new THREE.Vector2(spiralConfig.cardWidth, spiralConfig.cardHeight) },
+          uImageSizes: { value: new Vector2(image?.width ?? 16, image?.height ?? 9) },
+          uPlaneSizes: { value: new Vector2(spiralConfig.cardWidth, spiralConfig.cardHeight) },
           uRevealProgress: { value: 0 },
           uScrollSpeed: { value: 0 },
           uTexture: { value: texture },
@@ -579,7 +596,7 @@ export default function SpiralShowcase({ scrollProgress, onProjectClick }: Spira
         vertexShader: VERTEX_SHADER
       }) as ShowcaseMaterial
 
-      const mesh = new THREE.Mesh(planeGeometry, material) as ShowcaseMesh
+      const mesh = new Mesh(planeGeometry, material) as ShowcaseMesh
       mesh.scale.set(spiralConfig.cardWidth, spiralConfig.cardHeight, 1)
       mesh.userData = {
         hiddenProgress: 1,

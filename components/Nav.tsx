@@ -25,12 +25,12 @@ export default function Nav() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-ink/85 backdrop-blur">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-line bg-ink/85 backdrop-blur pt-[env(safe-area-inset-top)]">
         <nav className="relative flex h-11 items-center justify-between px-3 md:px-6">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-xs font-bold uppercase tracking-wider text-white md:hidden z-50 focus:outline-none cursor-pointer"
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center text-xs font-bold uppercase tracking-wider text-white md:hidden z-50 focus:outline-none cursor-pointer"
             aria-label="Toggle navigation menu"
           >
             {isOpen ? "Close" : "Menu"}
@@ -71,7 +71,7 @@ export default function Nav() {
 
       {/* Mobile Full Screen Menu Overlay */}
       <div
-        className={`fixed inset-0 z-40 flex flex-col justify-between bg-ink px-6 pt-24 pb-12 transition-all duration-300 md:hidden ${
+        className={`fixed inset-0 z-40 flex flex-col justify-between bg-ink px-6 pt-[calc(6rem+env(safe-area-inset-top))] pb-[calc(3rem+env(safe-area-inset-bottom))] transition-all duration-300 md:hidden ${
           isOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
         }`}
       >
@@ -87,7 +87,7 @@ export default function Nav() {
               <a
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="text-4xl font-bold uppercase tracking-tight text-white hover:text-muted transition-colors"
+                className="block py-2 text-4xl font-bold uppercase tracking-tight text-white hover:text-muted transition-colors"
               >
                 {link.label}
               </a>

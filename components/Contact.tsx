@@ -23,7 +23,7 @@ export default function Contact() {
           className="object-cover"
         />
       </div>
-      <div className="relative z-10 px-3 pb-0 pt-20 md:px-6 md:pt-28">
+      <div className="relative z-10 px-3 pb-[env(safe-area-inset-bottom)] pt-20 md:px-6 md:pt-28">
         <p data-reveal className="text-xs font-bold uppercase text-muted">
           Contact
         </p>
@@ -47,7 +47,7 @@ export default function Contact() {
         </div>
 
         <footer className="mt-20 flex flex-col gap-4 border-t border-line pt-6 text-xs font-bold uppercase md:mt-28 md:flex-row md:items-center md:justify-between">
-          <span className="text-muted">© 2026 Aditya Rawat</span>
+          <span className="text-muted py-3">© 2026 Aditya Rawat</span>
           <ul className="flex gap-6">
             {socials.map((social) => (
               <li key={social.label}>
@@ -55,14 +55,14 @@ export default function Contact() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="link-reveal"
+                  className="link-reveal inline-block py-3"
                 >
                   {social.label}
                 </a>
               </li>
             ))}
           </ul>
-          <a href="#home" className="link-reveal">
+          <a href="#home" className="link-reveal inline-block py-3">
             Back to top ↑
           </a>
         </footer>

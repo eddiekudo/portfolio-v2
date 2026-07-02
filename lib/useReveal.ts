@@ -15,11 +15,16 @@ export function useReveal<T extends HTMLElement>() {
   const ref = useRef<T>(null);
 
   useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return;
+
+    const isMobile = window.innerWidth < 768;
+
     const ctx = gsap.context(() => {
       if (ref.current) {
         gsap.fromTo(
           ref.current,
-          { y: 90, scale: 0.98, opacity: 0.3 },
+          { y: isMobile ? 20 : 90, scale: isMobile ? 1 : 0.98, opacity: 0.3 },
           {
             y: 0,
             scale: 1,
@@ -38,7 +43,7 @@ export function useReveal<T extends HTMLElement>() {
       gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
         gsap.fromTo(
           el,
-          { y: 48, opacity: 0 },
+          { y: isMobile ? 16 : 48, opacity: 0 },
           {
             y: 0,
             opacity: 1,

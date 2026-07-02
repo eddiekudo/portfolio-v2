@@ -48,6 +48,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -60,6 +66,7 @@ export default function RootLayout({
           rel="preload"
           href="/hero-eddie/models/macbook-opt.glb"
           as="fetch"
+          media="(min-width: 768px)"
           crossOrigin="anonymous"
         />
       </head>

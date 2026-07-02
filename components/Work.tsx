@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap, ScrollTrigger } from "../lib/gsap";
 import BackgroundGrid from "../app/spiral/components/BackgroundGrid";
-import SpiralShowcase from "../app/spiral/components/SpiralShowcase";
 import { projects } from "../app/spiral/data/projects";
+import dynamic from "next/dynamic";
 
-const ENABLE_PROJECT_PANEL = false;
+const SpiralShowcase = dynamic(() => import("../app/spiral/components/SpiralShowcase"), { ssr: false });
 
 interface WorkProps {
   preview?: boolean;
@@ -93,7 +93,7 @@ export default function Work({ preview = false }: WorkProps) {
     <section
       id={preview ? undefined : "work"}
       ref={containerRef}
-      className={`relative w-full ${preview ? "h-dvh pointer-events-none" : "h-[300vh] md:-mt-[100vh] z-[5]"} bg-[#090909]`}
+      className={`relative w-full ${preview ? "h-dvh pointer-events-none" : "h-[200vh] md:h-[300vh] md:-mt-[100vh] z-[5]"} bg-[#090909]`}
       aria-hidden={preview ? "true" : undefined}
     >
       <div

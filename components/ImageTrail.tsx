@@ -87,6 +87,11 @@ export default function ImageTrail({
   useEffect(() => {
     if (!enabled) return;
 
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reduceMotion.matches || window.innerWidth < 768) {
+      return;
+    }
+
     const container = containerRef.current;
     const root = rootRef.current;
 
@@ -98,7 +103,6 @@ export default function ImageTrail({
 
     if (stickerElements.length === 0) return;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const stickerOrder = shuffleImages(images);
     const stickerAnimations = new Map<HTMLElement, number>();
     const mousePos = { x: 0, y: 0 };

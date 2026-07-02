@@ -81,7 +81,7 @@ function FlowArt({
         ctx.revert();
         ctx = null;
       }
-      if (reduceMotion.matches) return;
+      if (reduceMotion.matches || window.innerWidth < 768) return;
 
       ctx = gsap.context(() => {
         const sections = gsap.utils.toArray<HTMLElement>("[data-flow-section]");
