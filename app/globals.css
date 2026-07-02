@@ -122,6 +122,49 @@ body {
   height: 100% !important;
 }
 
+@media (max-aspect-ratio: 7/5) and (min-width: 768px) {
+  .stage-front,
+  .stage-occluder,
+  .laptop-stage {
+    aspect-ratio: 16/9 !important;
+    width: 100% !important;
+    height: auto !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+  }
+
+  .stage-front .layer,
+  .stage-occluder .layer {
+    inset: 0 !important;
+    background-size: contain !important;
+  }
+
+  /* Layer 5 (left skyscraper) - 80% height, bottom-left */
+  .stage-front div[style*="5.webp"] {
+    background-size: auto 80% !important;
+    background-position: left bottom !important;
+  }
+
+  /* Layer 4 (mid buildings) - 100% height, center-bottom */
+  .stage-front div[style*="4.webp"] {
+    background-size: auto 100% !important;
+    background-position: center bottom !important;
+  }
+
+  /* Compact text sizes and bottom-left placement for all tablets */
+  .hero-reveal-text {
+    font-size: 2rem !important;
+  }
+
+  .hero-text-container {
+    bottom: 6% !important;
+    max-width: 45% !important;
+  }
+}
+
 .transition-handoff {
   position: absolute;
   inset: 0;
@@ -570,6 +613,7 @@ body {
     line-height: 1.25;
   }
 }
+
 
 @media (min-width: 1025px) {
   .hero-reveal-text {

@@ -137,7 +137,7 @@ export default function Hero() {
   const laptopStageRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<HTMLDivElement>(null);
   const [revealActive, setRevealActive] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -303,7 +303,7 @@ export default function Hero() {
         </div>
 
         <div 
-          className="absolute left-[5%] md:left-[6%] lg:left-[8%] bottom-[6%] md:bottom-[4%] lg:bottom-[8%] z-[10] max-w-[85%] md:max-w-[65%] lg:max-w-[48%] pointer-events-auto select-none"
+          className="hero-text-container absolute left-[5%] md:left-[6%] lg:left-[8%] bottom-[6%] lg:bottom-[8%] z-[10] max-w-[85%] lg:max-w-[48%] pointer-events-auto select-none"
           style={{ opacity: "var(--text-opacity, 1)" }}
         >
           <p className={`hero-reveal-text ${revealActive ? "reveal-active" : ""}`}>

@@ -175,7 +175,7 @@ async function setupEddieLaptopScene(
     Math.min(window.devicePixelRatio || 1, window.innerWidth < 760 ? 1.35 : 2);
 
   renderer.setPixelRatio(getPixelRatio());
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(mount.clientWidth, mount.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -189,7 +189,7 @@ async function setupEddieLaptopScene(
 
   const camera = new THREE.PerspectiveCamera(
     32,
-    window.innerWidth / window.innerHeight,
+    mount.clientWidth / mount.clientHeight,
     0.1,
     100,
   );
@@ -383,10 +383,10 @@ async function setupEddieLaptopScene(
   };
 
   const onResize = () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.aspect = mount.clientWidth / mount.clientHeight;
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(getPixelRatio());
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(mount.clientWidth, mount.clientHeight);
     onScroll();
   };
 
@@ -421,6 +421,10 @@ async function setupEddieLaptopScene(
     let maxX = -Infinity;
     let maxY = -Infinity;
 
+    const rect = mount.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+
     for (const x of [min.x, max.x]) {
       for (const y of [min.y, max.y]) {
         for (const z of [min.z, max.z]) {
@@ -428,8 +432,8 @@ async function setupEddieLaptopScene(
           screenMesh.localToWorld(screenCorner);
           projectedCorner.copy(screenCorner).project(camera);
 
-          const sx = (projectedCorner.x * 0.5 + 0.5) * window.innerWidth;
-          const sy = (-projectedCorner.y * 0.5 + 0.5) * window.innerHeight;
+          const sx = rect.left + (projectedCorner.x * 0.5 + 0.5) * cw;
+          const sy = rect.top + (-projectedCorner.y * 0.5 + 0.5) * ch;
 
           minX = Math.min(minX, sx);
           minY = Math.min(minY, sy);
@@ -579,29 +583,16 @@ async function setupEddieLaptopScene(
     const wovenY = pose.y;
     const mobileX = wovenX - mobilePrep * (wovenX * 0.8 + 0.08);
     const mobileY = wovenY - mobilePrep * 0.18;
-    const mobileScale = pose.s * (1 - mobilePrep * 0.42);
-
-    const aspect = window.innerWidth / window.innerHeight;
-    let aspectScaleModifier = 1;
-    let aspectYModifier = 0;
-
-    if (aspect < 1.4) {
-      const t = clamp((aspect - 0.7) / 0.7, 0, 1);
-      const targetScaleMod = lerp(0.68, 0.88, t);
-      const targetYMod = lerp(0.20, 0.10, t);
-
-      const fade = 1 - zoomProgress;
-      aspectScaleModifier = lerp(1, targetScaleMod, fade);
-      aspectYModifier = targetYMod * fade;
-    }
+    const narrowScalePenalty = window.innerWidth < 768 ? 0.42 : 0.18;
+    const mobileScale = pose.s * (1 - mobilePrep * narrowScalePenalty);
 
     laptop.visible = modelReady && scrollY >= TIMELINE.enterStart;
     const laptopInFront = reducedMotion || scrollY >= 550;
     mount.classList.toggle("is-above-foreground", laptopInFront);
     mount.classList.toggle("is-behind-character", !laptopInFront);
 
-    laptop.position.set(mobileX, mobileY + aspectYModifier, 0);
-    laptop.scale.setScalar(mobileScale * aspectScaleModifier);
+    laptop.position.set(mobileX, mobileY, 0);
+    laptop.scale.setScalar(mobileScale);
     laptop.rotation.set(pose.rx, FACE_Y + pose.ry, pose.rz);
 
     if (lidNode) {
@@ -672,6 +663,8 @@ async function setupEddieLaptopScene(
   resetScreenVars(transitionRoot);
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onResize);
+  onResize();
+  setTimeout(onResize, 0);
   window.addEventListener("mousemove", onMouseMove, { passive: true });
   reducedMotionQuery.addEventListener("change", onReducedMotionChange);
 
