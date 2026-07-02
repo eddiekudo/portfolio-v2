@@ -450,6 +450,9 @@ async function setupEddieLaptopScene(
   };
 
   const updateScreenTransition = (scrollY: number, zoomProgress: number) => {
+    const textOpacity = 1 - clamp((scrollY - 1000) / 200, 0, 1);
+    transitionRoot.style.setProperty("--text-opacity", textOpacity.toFixed(3));
+
     if (reducedMotion) {
       transitionRoot.style.setProperty("--screen-opacity", "0");
       transitionRoot.style.setProperty(
@@ -556,30 +559,6 @@ async function setupEddieLaptopScene(
 
     const scrollY = reducedMotion ? TIMELINE.reducedPose : current;
     const pose = samplePose(scrollY);
-    const narrowProgress = clamp((760 - window.innerWidth) / 370, 0, 1);
-    const mobileSettleProgress = smooth(
-      clamp((scrollY - 850) / (TIMELINE.pushStart - 850), 0, 1),
-    );
-    const mobilePrep = narrowProgress * (1 - mobileSettleProgress);
-    const wovenX = pose.x;
-    const wovenY = pose.y;
-    const mobileX = wovenX - mobilePrep * (wovenX * 0.8 + 0.08);
-    const mobileY = wovenY - mobilePrep * 0.18;
-    const mobileScale = pose.s * (1 - mobilePrep * 0.42);
-
-    laptop.visible = modelReady && scrollY >= TIMELINE.enterStart;
-    const laptopInFront = reducedMotion || scrollY >= 550;
-    mount.classList.toggle("is-above-foreground", laptopInFront);
-    mount.classList.toggle("is-behind-character", !laptopInFront);
-
-    laptop.position.set(mobileX, mobileY, 0);
-    laptop.scale.setScalar(mobileScale);
-    laptop.rotation.set(pose.rx, FACE_Y + pose.ry, pose.rz);
-
-    if (lidNode) {
-      lidNode.rotation.x = lidClosedEulerX + LID_CLOSE_DELTA * (1 - pose.lid);
-    }
-
     const zoomProgress = reducedMotion
       ? 0
       : smooth(
@@ -590,6 +569,45 @@ async function setupEddieLaptopScene(
             1,
           ),
         );
+
+    const narrowProgress = clamp((1200 - window.innerWidth) / 432, 0, 1);
+    const mobileSettleProgress = smooth(
+      clamp((scrollY - 850) / (TIMELINE.pushStart - 850), 0, 1),
+    );
+    const mobilePrep = narrowProgress * (1 - mobileSettleProgress);
+    const wovenX = pose.x;
+    const wovenY = pose.y;
+    const mobileX = wovenX - mobilePrep * (wovenX * 0.8 + 0.08);
+    const mobileY = wovenY - mobilePrep * 0.18;
+    const mobileScale = pose.s * (1 - mobilePrep * 0.42);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    let aspectScaleModifier = 1;
+    let aspectYModifier = 0;
+
+    if (aspect < 1.4) {
+      const t = clamp((aspect - 0.7) / 0.7, 0, 1);
+      const targetScaleMod = lerp(0.68, 0.88, t);
+      const targetYMod = lerp(0.20, 0.10, t);
+
+      const fade = 1 - zoomProgress;
+      aspectScaleModifier = lerp(1, targetScaleMod, fade);
+      aspectYModifier = targetYMod * fade;
+    }
+
+    laptop.visible = modelReady && scrollY >= TIMELINE.enterStart;
+    const laptopInFront = reducedMotion || scrollY >= 550;
+    mount.classList.toggle("is-above-foreground", laptopInFront);
+    mount.classList.toggle("is-behind-character", !laptopInFront);
+
+    laptop.position.set(mobileX, mobileY + aspectYModifier, 0);
+    laptop.scale.setScalar(mobileScale * aspectScaleModifier);
+    laptop.rotation.set(pose.rx, FACE_Y + pose.ry, pose.rz);
+
+    if (lidNode) {
+      lidNode.rotation.x = lidClosedEulerX + LID_CLOSE_DELTA * (1 - pose.lid);
+    }
+
     const alignProgress = smooth(
       clamp((scrollY - 680) / (TIMELINE.pushStart - 680), 0, 1),
     );
