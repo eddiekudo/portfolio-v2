@@ -308,11 +308,33 @@ body {
   }
 }
 
-/* Custom cursor: hide the native cursor when the custom one is active */
+/* Custom cursor: apply the custom SVG cursors when custom cursor is active */
 @media (pointer: fine) {
   html.has-custom-cursor,
+  html.has-custom-cursor body,
   html.has-custom-cursor * {
-    cursor: none !important;
+    cursor: url("/cursors/cursor-default.svg") 2 0, auto !important;
+  }
+
+  html.has-custom-cursor a,
+  html.has-custom-cursor button,
+  html.has-custom-cursor [role="button"],
+  html.has-custom-cursor .spiral-fallback__card,
+  html.has-custom-cursor a *,
+  html.has-custom-cursor button * {
+    cursor: url("/cursors/cursor-pointer.svg") 12 12, pointer !important;
+  }
+
+  html.has-custom-cursor h1,
+  html.has-custom-cursor h2,
+  html.has-custom-cursor h3,
+  html.has-custom-cursor h4,
+  html.has-custom-cursor h5,
+  html.has-custom-cursor h6,
+  html.has-custom-cursor p,
+  html.has-custom-cursor span,
+  html.has-custom-cursor li {
+    cursor: url("/cursors/cursor-text.svg") 12 12, text !important;
   }
 }
 
@@ -797,4 +819,34 @@ body {
 }
 
 /* Optimized paint and layout performance - removed content-visibility: auto to eliminate CLS */
+
+/* ─── Custom Cursor Bubble ─── */
+.cursor-bubble {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-color: var(--color-paper, #ffffff);
+  color: var(--color-ink, #090909);
+  padding: 5px 12px 4px 12px;
+  border-radius: 50px 50px 50px 0px;
+  font-size: 13px;
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: left center;
+  z-index: 10000;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+/* Hide on touch devices */
+@media (pointer: coarse), (hover: none) {
+  .cursor-bubble {
+    display: none !important;
+  }
+}
 
