@@ -173,6 +173,7 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
   const observerRef = useRef<IntersectionObserver | null>(null)
   const isLoopRunningRef = useRef<boolean>(false)
   const isInViewRef = useRef<boolean>(false)
+  const hasInitializedRef = useRef<boolean>(false)
 
   // Performance caching refs
   const hasHoverRef = useRef<boolean>(true)
@@ -444,6 +445,7 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
     }
     isLoopRunningRef.current = false
     isInViewRef.current = false
+    hasInitializedRef.current = false
 
     cancelAnimationFrame(animationFrameRef.current)
     clearVisibilityTimers()
@@ -576,27 +578,12 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
 
     scheduleVisibility(false)
 
-    // Set up IntersectionObserver to control render loop
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        isInViewRef.current = entry.isIntersecting
-
-        if (isInViewRef.current && !isLoopRunningRef.current) {
-          isLoopRunningRef.current = true
-          previousFrameTimeRef.current = performance.now()
-          animationFrameRef.current = requestAnimationFrame(animate)
-        } else if (!isInViewRef.current && isLoopRunningRef.current) {
-          cancelAnimationFrame(animationFrameRef.current)
-          isLoopRunningRef.current = false
-        }
-      },
-      { threshold: 0 }
-    )
-    if (canvasHost.current) {
-      observer.observe(canvasHost.current)
+    // Start the animation loop if it's still in view
+    if (isInViewRef.current && !isLoopRunningRef.current) {
+      isLoopRunningRef.current = true
+      previousFrameTimeRef.current = performance.now()
+      animationFrameRef.current = requestAnimationFrame(animate)
     }
-    observerRef.current = observer
   }
 
   // Pointer event handlers
@@ -650,21 +637,50 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
   }
 
   useEffect(() => {
-    const setupFrame = requestAnimationFrame(() => {
-      void createScene()
-    })
-
     const host = canvasHost.current
-    const resizeObserver = new ResizeObserver(() => {
-      resize()
-    })
+    let observer: IntersectionObserver | null = null
+    let resizeObserver: ResizeObserver | null = null
+
     if (host) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0]
+          const isNear = entry.isIntersecting
+          isInViewRef.current = isNear
+
+          if (isNear) {
+            if (!hasInitializedRef.current) {
+              hasInitializedRef.current = true
+              void createScene()
+            } else if (!isLoopRunningRef.current) {
+              isLoopRunningRef.current = true
+              previousFrameTimeRef.current = performance.now()
+              animationFrameRef.current = requestAnimationFrame(animate)
+            }
+          } else {
+            if (isLoopRunningRef.current) {
+              cancelAnimationFrame(animationFrameRef.current)
+              isLoopRunningRef.current = false
+            }
+          }
+        },
+        { rootMargin: '300px', threshold: 0 }
+      )
+      observer.observe(host)
+      observerRef.current = observer
+
+      resizeObserver = new ResizeObserver(() => {
+        resize()
+      })
       resizeObserver.observe(host)
     }
 
     return () => {
-      cancelAnimationFrame(setupFrame)
-      if (host) {
+      if (observer) {
+        observer.disconnect()
+        observerRef.current = null
+      }
+      if (host && resizeObserver) {
         resizeObserver.unobserve(host)
       }
       cleanupScene()

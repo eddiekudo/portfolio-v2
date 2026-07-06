@@ -87,8 +87,6 @@ function FlowArt({
         const sections = gsap.utils.toArray<HTMLElement>("[data-flow-section]");
 
         sections.forEach((section, index) => {
-          gsap.set(section, { zIndex: index + 1 });
-
           const inner = section.querySelector<HTMLElement>("[data-flow-inner]");
           if (!inner) return;
 
@@ -103,16 +101,6 @@ function FlowArt({
                 end: "top 25%",
                 scrub: true,
               },
-            });
-          }
-
-          if (index < sections.length - 1) {
-            ScrollTrigger.create({
-              trigger: section,
-              start: "bottom bottom",
-              end: "bottom top",
-              pin: true,
-              pinSpacing: false,
             });
           }
         });
@@ -134,7 +122,7 @@ function FlowArt({
     <div
       ref={containerRef}
       aria-label={ariaLabel}
-      className={cx("w-full overflow-x-hidden", className)}
+      className={cx("w-full overflow-x-clip", className)}
     >
       {children}
     </div>
@@ -209,9 +197,9 @@ function ChapterHeader({
 
 export default function About() {
   return (
-    <section id="about" className="relative isolate bg-ink text-paper">
+    <section id="about" className="relative isolate bg-ink text-paper overflow-x-clip">
       <FlowArt>
-        <FlowSection ariaLabel="About origin" className="bg-ink text-paper">
+        <FlowSection ariaLabel="About origin" className="bg-ink text-paper md:sticky md:top-0 md:z-10">
           <ChapterHeader
             index="01"
             label="Origin"
@@ -271,7 +259,7 @@ export default function About() {
 
         <FlowSection
           ariaLabel="About craft"
-          className="bg-paper text-ink"
+          className="bg-paper text-ink md:sticky md:top-0 md:z-20"
           innerClassName="text-ink"
         >
           <ChapterHeader
@@ -334,7 +322,7 @@ export default function About() {
           </div>
         </FlowSection>
 
-        <FlowSection ariaLabel="About toolkit" className="bg-ink text-paper">
+        <FlowSection ariaLabel="About toolkit" className="bg-ink text-paper md:sticky md:top-0 md:z-30">
           <ChapterHeader
             index="03"
             label="Toolkit"

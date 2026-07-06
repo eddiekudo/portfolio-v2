@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { gsap, ScrollTrigger } from "../lib/gsap";
 import BackgroundGrid from "../app/spiral/components/BackgroundGrid";
 import { projects } from "../app/spiral/data/projects";
@@ -16,6 +16,11 @@ export default function Work({ preview = false }: WorkProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const scrollProgressRef = useRef(0);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (preview) return;
@@ -31,8 +36,6 @@ export default function Work({ preview = false }: WorkProps) {
         trigger: trigger,
         start: "top top",
         end: "bottom bottom",
-        pin: pinTarget,
-        pinSpacing: false,
         anticipatePin: 1,
         scrub: 1.0, // Smooth scrubbing
         snap: {
@@ -98,7 +101,7 @@ export default function Work({ preview = false }: WorkProps) {
     >
       <div
         ref={stickyRef}
-        className="work-sticky relative grid h-dvh w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(3.75rem+env(safe-area-inset-top))] md:px-6 md:pt-16 md:pb-10"
+        className="work-sticky md:sticky md:top-0 relative grid h-dvh w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(3.75rem+env(safe-area-inset-top))] md:px-6 md:pt-16 md:pb-10"
       >
         <BackgroundGrid />
 
@@ -111,10 +114,12 @@ export default function Work({ preview = false }: WorkProps) {
 
         {/* 3D Spiral Showcase Canvas Container */}
         <div className="relative min-h-0 w-full overflow-hidden">
-          <SpiralShowcase
-            scrollProgressRef={scrollProgressRef}
-            onProjectClick={() => {}}
-          />
+          {isMounted && (
+            <SpiralShowcase
+              scrollProgressRef={scrollProgressRef}
+              onProjectClick={() => {}}
+            />
+          )}
         </div>
 
         {/* Dynamic Footer Scroll Prompt */}

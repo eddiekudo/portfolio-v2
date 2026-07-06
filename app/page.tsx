@@ -4,6 +4,8 @@ import Work from "../components/Work";
 import About from "../components/About";
 import Contact from "../components/Contact";
 
+export const dynamic = "force-static";
+
 export default function Home() {
   return (
     <>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import ImageTrail from "./ImageTrail";
+import dynamic from "next/dynamic";
+
+const ImageTrail = dynamic(() => import("./ImageTrail"), { ssr: false });
 
 const REDUCED_MOTION_TOTAL_MS = 900;
 const END_FADE_DELAY_MS = 210;
@@ -29,12 +31,11 @@ export default function Preloader() {
   const [isRemoved, setIsRemoved] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMobile(window.innerWidth < 768);
-    }, 0);
-    return () => clearTimeout(timer);
+    setIsMounted(true);
+    setIsMobile(window.innerWidth < 768);
   }, []);
 
   useEffect(() => {
@@ -293,14 +294,16 @@ export default function Preloader() {
         </div>
       </div>
 
-      <ImageTrail
-        containerRef={rootRef}
-        images={stickerImages}
-        enabled={!isComplete && !isMobile}
-        className="portfolio-preloader__stickers"
-        stickerClass="portfolio-preloader__sticker"
-        innerClass="portfolio-preloader__sticker-inner"
-      />
+      {isMounted && !isMobile && (
+        <ImageTrail
+          containerRef={rootRef}
+          images={stickerImages}
+          enabled={!isComplete && !isMobile}
+          className="portfolio-preloader__stickers"
+          stickerClass="portfolio-preloader__sticker"
+          innerClass="portfolio-preloader__sticker-inner"
+        />
+      )}
     </div>
   );
 }

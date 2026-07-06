@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import Cursor from "../components/Cursor";
+import CursorWrapper from "../components/CursorWrapper";
 import Preloader from "../components/Preloader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -69,11 +69,36 @@ export default function RootLayout({
           media="(min-width: 768px)"
           crossOrigin="anonymous"
         />
+        <link
+          rel="preload"
+          href="/preloader-eddie/assets/goga-regular-a79764c8.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/hero-eddie/layers/1.webp"
+          as="image"
+          media="(min-width: 768px)"
+        />
+        <link
+          rel="preload"
+          href="/hero-eddie/layers/2.webp"
+          as="image"
+          media="(min-width: 768px)"
+        />
+        <link
+          rel="preload"
+          href="/hero-eddie/hero-section-all-layers.webp"
+          as="image"
+          media="(max-width: 767px)"
+        />
       </head>
       <body className="min-h-full">
         {children}
         <Preloader />
-        <Cursor />
+        <CursorWrapper />
         <SpeedInsights />
       </body>
     </html>

@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 import { createEddieLaptopScene } from "./EddieHero/createEddieLaptopScene";
-import Work from "./Work";
-import ImageTrail from "./ImageTrail";
+
+const Work = dynamic(() => import("./Work"), { ssr: false });
+const ImageTrail = dynamic(() => import("./ImageTrail"), { ssr: false });
 
 const stickerImages = [
   "/preloader-eddie/assets/loader-asset-01-3.webp",
@@ -109,15 +111,9 @@ const parseNumber = (value: string | undefined, fallback: number) => {
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
 function EddieImageLayer({ layer }: { layer: EddieLayer }) {
-  const style: LayerStyle = {
-    "--img": `url('${layer.src}')`,
-    "--pos-x": layer.positionX,
-    "--pos-y": layer.positionY,
-  };
-
   return (
     <div
-      className="layer img-layer"
+      className="layer overflow-hidden"
       data-eddie-layer
       data-depth={layer.depth}
       data-scroll-depth={layer.scrollDepth}
@@ -125,8 +121,18 @@ function EddieImageLayer({ layer }: { layer: EddieLayer }) {
       data-offset-x={layer.offsetX}
       data-offset-y={layer.offsetY}
       data-scale-modifier={layer.scaleModifier}
-      style={style}
-    />
+    >
+      <Image
+        src={layer.src}
+        alt=""
+        fill
+        sizes="100vw"
+        className="object-cover"
+        style={{
+          objectPosition: `${layer.positionX ?? "center"} ${layer.positionY ?? "center"}`
+        }}
+      />
+    </div>
   );
 }
 
@@ -138,9 +144,11 @@ export default function Hero() {
   const laptopStageRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<HTMLDivElement>(null);
   const [revealActive, setRevealActive] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -278,18 +286,33 @@ export default function Hero() {
       </h1>
 
       <div ref={animationFrameRef} className="animation-frame" aria-hidden="true">
+        {/* Mobile Background Fallback */}
+        <div className="absolute inset-0 block md:hidden">
+          <Image
+            src="/hero-eddie/hero-section-all-layers.webp"
+            alt=""
+            fill
+            priority
+            fetchPriority="high"
+            sizes="100vw"
+            className="object-cover"
+          />
+        </div>
+
         <div ref={backStageRef} className="stage stage-back">
           {backLayers.map((layer) => (
             <EddieImageLayer key={layer.src} layer={layer} />
           ))}
         </div>
 
-        <ImageTrail
-          containerRef={animationFrameRef}
-          images={stickerImages}
-          zIndexStart={2}
-          enabled={!isMobile}
-        />
+        {isMounted && !isMobile && (
+          <ImageTrail
+            containerRef={animationFrameRef}
+            images={stickerImages}
+            zIndexStart={2}
+            enabled={!isMobile}
+          />
+        )}
 
         <div ref={laptopStageRef} className="laptop-stage" />
 
@@ -338,7 +361,7 @@ export default function Hero() {
 
         <div className="transition-handoff">
           <div className="transition-handoff__content">
-            {!isMobile && <Work preview={true} />}
+            {isMounted && !isMobile && <Work preview={true} />}
           </div>
         </div>
       </div>

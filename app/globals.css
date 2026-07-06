@@ -207,9 +207,6 @@ body {
     position: relative;
     height: auto;
     aspect-ratio: 836 / 941;
-    background-image: url("/hero-eddie/hero-section-all-layers.webp");
-    background-size: cover;
-    background-position: center;
   }
   .stage,
   .laptop-stage,
@@ -344,7 +341,7 @@ body {
     format("woff2");
   font-weight: 400;
   font-style: normal;
-  font-display: swap;
+  font-display: block;
 }
 
 .portfolio-preloader {
