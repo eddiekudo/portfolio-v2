@@ -4,6 +4,7 @@ import "./globals.css";
 import CursorWrapper from "../components/CursorWrapper";
 import Preloader from "../components/Preloader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 const grotesk = Archivo({
   variable: "--font-grotesk",
@@ -100,6 +101,7 @@ export default function RootLayout({
         <Preloader />
         <CursorWrapper />
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
