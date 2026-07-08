@@ -168,7 +168,10 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
   const previousFrameTimeRef = useRef<number>(0)
   const hoveredMeshRef = useRef<ShowcaseMesh | null>(null)
   const meshesRef = useRef<ShowcaseMesh[]>([])
-  const visibilityTimersRef = useRef<Set<NodeJS.Timeout>>(new Set())
+  const visibilityTimersRef = useRef<Set<NodeJS.Timeout> | null>(null)
+  if (visibilityTimersRef.current === null) {
+    visibilityTimersRef.current = new Set()
+  }
   const lastHoveredSlugRef = useRef<string>('')
   const observerRef = useRef<IntersectionObserver | null>(null)
   const isLoopRunningRef = useRef<boolean>(false)
@@ -193,7 +196,10 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
   const activePointerIdRef = useRef<number | null>(null)
   const pointerStartXRef = useRef<number>(0)
   const lastPointerXRef = useRef<number>(0)
-  const pointerRef = useRef<Vector2>(new Vector2(2, 2))
+  const pointerRef = useRef<Vector2 | null>(null)
+  if (pointerRef.current === null) {
+    pointerRef.current = new Vector2(2, 2)
+  }
   const didDragRef = useRef<boolean>(false)
 
   // Caching the media query states on mount
@@ -216,8 +222,8 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
   // Helper visibility schedulers
 
   const clearVisibilityTimers = () => {
-    visibilityTimersRef.current.forEach((timer) => clearTimeout(timer))
-    visibilityTimersRef.current.clear()
+    visibilityTimersRef.current?.forEach((timer) => clearTimeout(timer))
+    visibilityTimersRef.current?.clear()
   }
 
   const scheduleVisibility = (hidden: boolean) => {
@@ -226,9 +232,9 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
       const delay = (index % 4) * (hidden ? 30 : 50)
       const timer = setTimeout(() => {
         setHidden(mesh, hidden)
-        visibilityTimersRef.current.delete(timer)
+        visibilityTimersRef.current?.delete(timer)
       }, delay)
-      visibilityTimersRef.current.add(timer)
+      visibilityTimersRef.current?.add(timer)
     })
   }
 
@@ -242,13 +248,13 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
     if (!rect) return
 
     const pointer = getNormalizedCanvasPointer(clientX, clientY, rect)
-    pointerRef.current.set(pointer.x, pointer.y)
+    pointerRef.current?.set(pointer.x, pointer.y)
   }
 
   const getFrontFacingIntersection = () => {
     const raycaster = raycasterRef.current
     const camera = cameraRef.current
-    if (!raycaster || !camera) return null
+    if (!raycaster || !camera || !pointerRef.current) return null
 
     raycaster.setFromCamera(pointerRef.current, camera)
     const intersections = raycaster.intersectObjects(meshesRef.current, false)
@@ -901,6 +907,11 @@ export default function SpiralShowcase({ scrollProgressRef, onProjectClick }: Sp
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleCanvasClick()
+              }
+            }}
           />
           {/* CSS Edge Fade Overlay */}
           <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-[#090909] via-transparent via-20% to-[#090909] to-80%" />

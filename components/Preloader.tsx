@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 
 const ImageTrail = dynamic(() => import("./ImageTrail"), { ssr: false });
@@ -26,17 +26,38 @@ const stickerImages = [
 const leftNumbers = Array.from({ length: 10 }, (_, index) => index);
 const rightNumbers = [0, 9, 5, 4, 6, 8, 5, 4, 6, 9];
 
+const emptySubscribe = () => () => {};
+const isMountedStore = {
+  subscribe: emptySubscribe,
+  getSnapshot: () => true,
+  getServerSnapshot: () => false,
+};
+
+const isMobileStore = {
+  subscribe: (callback: () => void) => {
+    window.addEventListener("resize", callback, { passive: true });
+    return () => window.removeEventListener("resize", callback);
+  },
+  getSnapshot: () => window.innerWidth < 768,
+  getServerSnapshot: () => false,
+};
+
 export default function Preloader() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [isRemoved, setIsRemoved] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-    setIsMobile(window.innerWidth < 768);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    isMountedStore.subscribe,
+    isMountedStore.getSnapshot,
+    isMountedStore.getServerSnapshot
+  );
+
+  const isMobile = useSyncExternalStore(
+    isMobileStore.subscribe,
+    isMobileStore.getSnapshot,
+    isMobileStore.getServerSnapshot
+  );
 
   useEffect(() => {
     const root = rootRef.current;

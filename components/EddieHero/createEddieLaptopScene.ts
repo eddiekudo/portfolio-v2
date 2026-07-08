@@ -4,6 +4,7 @@ type CreateEddieLaptopSceneOptions = {
   mount: HTMLElement;
   hero: HTMLElement;
   transitionRoot: HTMLElement;
+  stages?: (HTMLElement | null)[];
   modelPath?: string;
   onUpdate?: (data: {
     scrollY: number;
@@ -20,6 +21,12 @@ const MODEL_PATH = "/hero-eddie/models/macbook-opt.glb";
 const TARGET_WIDTH = 3.9;
 const FACE_Y = 0;
 const LID_CLOSE_DELTA = 1.42;
+
+const TAKEOVER_START = 1050;
+const TAKEOVER_END = 1200;
+const HOVER_X_INTENSITY = 170;
+const HOVER_Y_INTENSITY = 115;
+const HOVER_EASE = 0.085;
 
 const TIMELINE = {
   enterStart: 0,
@@ -143,6 +150,7 @@ async function setupEddieLaptopScene(
     mount,
     hero,
     transitionRoot,
+    stages = [],
     modelPath = MODEL_PATH,
     onUpdate,
   }: CreateEddieLaptopSceneOptions,
@@ -243,6 +251,19 @@ async function setupEddieLaptopScene(
   let reducedMotion = reducedMotionQuery.matches;
   let isInView = false;
   let isLoopRunning = false;
+
+  let renderX = 0;
+  let renderY = 0;
+
+  const parseNumber = (value: string | undefined, fallback: number) => {
+    const parsed = Number.parseFloat(value ?? "");
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const layers = Array.from(
+    hero.querySelectorAll<HTMLElement>("[data-eddie-layer]"),
+  );
+  const validStages = stages.filter(Boolean) as HTMLElement[];
 
   const makeScreenTexture = () => {
     const canvas = document.createElement("canvas");
@@ -647,6 +668,58 @@ async function setupEddieLaptopScene(
     updateScreenTransition(scrollY, zoomProgress);
     renderer.render(scene, camera);
 
+    // Apply coordinated parallax updates to background/foreground HTML stages and layers
+    if (reducedMotion) {
+      for (const layer of layers) {
+        layer.style.transform = "none";
+      }
+      for (const stage of validStages) {
+        stage.style.opacity = "1";
+        stage.style.transform = "none";
+      }
+    } else {
+      const boomerangProgress = clamp(scrollY / 1050, 0, 1);
+      const hoverFactor = 1 - boomerangProgress;
+
+      renderX += (mouseX * hoverFactor - renderX) * HOVER_EASE;
+      renderY += (mouseY * hoverFactor - renderY) * HOVER_EASE;
+
+      const takeover = smooth(
+        clamp((scrollY - TAKEOVER_START) / (TAKEOVER_END - TAKEOVER_START), 0, 1),
+      );
+      const scrollFade = 1 - takeover;
+
+      const maxSwayX = 0.12;
+      const maxSwayY = 0.08;
+      const swayX = Math.sin(time) * maxSwayX * ambientStrength * scrollFade;
+      const swayY = Math.cos(time * 0.7) * maxSwayY * ambientStrength * scrollFade;
+
+      const totalOffsetX = renderX + swayX;
+      const totalOffsetY = renderY + swayY;
+
+      for (const layer of layers) {
+        const depth = parseNumber(layer.dataset.depth, 0);
+        const scrollDepth = parseNumber(layer.dataset.scrollDepth, depth);
+        const scrollMaxY = parseNumber(layer.dataset.scrollMaxY, Infinity);
+        const offsetX = parseNumber(layer.dataset.offsetX, 0);
+        const offsetY = parseNumber(layer.dataset.offsetY, 0);
+        const scaleModifier = parseNumber(layer.dataset.scaleModifier, 1);
+        const scrollTravelY = Math.min(scrollY * scrollDepth * 0.9, scrollMaxY);
+        const x = offsetX - totalOffsetX * depth * HOVER_X_INTENSITY;
+        const y = offsetY - totalOffsetY * depth * HOVER_Y_INTENSITY - scrollTravelY;
+        const scale = (1 + depth * 0.08) * scaleModifier;
+
+        layer.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(
+          2,
+        )}px, 0) scale(${scale})`;
+      }
+
+      for (const stage of validStages) {
+        stage.style.opacity = (1 - takeover * 0.94).toFixed(3);
+        stage.style.transform = `scale(${(1 + takeover * 0.12).toFixed(3)})`;
+      }
+    }
+
     if (onUpdate) {
       const boomerangProgress = clamp(scrollY / 1050, 0, 1);
       const hoverFactor = 1 - boomerangProgress;
@@ -695,6 +768,14 @@ async function setupEddieLaptopScene(
     mount.classList.remove("is-above-foreground");
     mount.classList.remove("is-behind-character");
     resetScreenVars(transitionRoot);
+
+    for (const layer of layers) {
+      layer.style.transform = "";
+    }
+    for (const stage of validStages) {
+      stage.style.opacity = "";
+      stage.style.transform = "";
+    }
 
     if (renderer.domElement.parentElement === mount) {
       mount.removeChild(renderer.domElement);

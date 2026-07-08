@@ -79,18 +79,6 @@ export default function RootLayout({
         />
         <link
           rel="preload"
-          href="/hero-eddie/layers/1.webp"
-          as="image"
-          media="(min-width: 768px)"
-        />
-        <link
-          rel="preload"
-          href="/hero-eddie/layers/2.webp"
-          as="image"
-          media="(min-width: 768px)"
-        />
-        <link
-          rel="preload"
           href="/hero-eddie/hero-section-all-layers.webp"
           as="image"
           media="(max-width: 767px)"

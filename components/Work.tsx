@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { gsap, ScrollTrigger } from "../lib/gsap";
 import BackgroundGrid from "../app/spiral/components/BackgroundGrid";
 import { projects } from "../app/spiral/data/projects";
@@ -12,15 +12,23 @@ interface WorkProps {
   preview?: boolean;
 }
 
+const emptySubscribe = () => () => {};
+const isMountedStore = {
+  subscribe: emptySubscribe,
+  getSnapshot: () => true,
+  getServerSnapshot: () => false,
+};
+
 export default function Work({ preview = false }: WorkProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const scrollProgressRef = useRef(0);
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    isMountedStore.subscribe,
+    isMountedStore.getSnapshot,
+    isMountedStore.getServerSnapshot
+  );
 
   useEffect(() => {
     if (preview) return;

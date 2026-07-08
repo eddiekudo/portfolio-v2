@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 
@@ -25,11 +24,7 @@ const stickerImages = [
   "/preloader-eddie/assets/loader-asset-12-untitled-1.webp",
 ];
 
-const TAKEOVER_START = 1050;
-const TAKEOVER_END = 1200;
-const HOVER_X_INTENSITY = 170;
-const HOVER_Y_INTENSITY = 115;
-const HOVER_EASE = 0.085;
+
 
 type EddieLayer = {
   src: string;
@@ -42,13 +37,6 @@ type EddieLayer = {
   positionY?: string;
   scaleModifier?: number;
 };
-
-type LayerStyle = CSSProperties & {
-  "--img": string;
-  "--pos-x"?: string;
-  "--pos-y"?: string;
-};
-
 const backLayers: EddieLayer[] = [
   { src: "/hero-eddie/layers/1.webp", depth: 0.03 },
   { src: "/hero-eddie/layers/2.webp", depth: 0.07 },
@@ -103,10 +91,7 @@ const occluderLayer: EddieLayer = {
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
-const parseNumber = (value: string | undefined, fallback: number) => {
-  const parsed = Number.parseFloat(value ?? "");
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
@@ -130,6 +115,8 @@ function EddieImageLayer({ layer, isTabletPortrait }: { layer: EddieLayer; isTab
         src={src}
         alt=""
         fill
+        unoptimized
+        priority
         sizes="100vw"
         className="object-cover"
         style={{
@@ -140,6 +127,35 @@ function EddieImageLayer({ layer, isTabletPortrait }: { layer: EddieLayer; isTab
   );
 }
 
+const emptySubscribe = () => () => {};
+const isMountedStore = {
+  subscribe: emptySubscribe,
+  getSnapshot: () => true,
+  getServerSnapshot: () => false,
+};
+
+const isMobileStore = {
+  subscribe: (callback: () => void) => {
+    window.addEventListener("resize", callback, { passive: true });
+    return () => window.removeEventListener("resize", callback);
+  },
+  getSnapshot: () => window.innerWidth < 768,
+  getServerSnapshot: () => false,
+};
+
+const isTabletPortraitStore = {
+  subscribe: (callback: () => void) => {
+    window.addEventListener("resize", callback, { passive: true });
+    return () => window.removeEventListener("resize", callback);
+  },
+  getSnapshot: () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    return width >= 768 && width <= 1024 && height > width;
+  },
+  getServerSnapshot: () => false,
+};
+
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const backStageRef = useRef<HTMLDivElement>(null);
@@ -148,28 +164,24 @@ export default function Hero() {
   const laptopStageRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<HTMLDivElement>(null);
   const [revealActive, setRevealActive] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTabletPortrait, setIsTabletPortrait] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-    const checkMobile = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      setIsMobile(width < 768);
-      setIsTabletPortrait(
-        width >= 768 &&
-        width <= 1024 &&
-        height > width
-      );
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile, { passive: true });
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
-  }, []);
+  const isMounted = useSyncExternalStore(
+    isMountedStore.subscribe,
+    isMountedStore.getSnapshot,
+    isMountedStore.getServerSnapshot
+  );
+
+  const isMobile = useSyncExternalStore(
+    isMobileStore.subscribe,
+    isMobileStore.getSnapshot,
+    isMobileStore.getServerSnapshot
+  );
+
+  const isTabletPortrait = useSyncExternalStore(
+    isTabletPortraitStore.subscribe,
+    isTabletPortraitStore.getSnapshot,
+    isTabletPortraitStore.getServerSnapshot
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -201,86 +213,18 @@ export default function Hero() {
 
     if (!section || !laptopStage) return;
 
-    const reducedMotionQuery = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    );
-    let reducedMotion = reducedMotionQuery.matches;
-    let renderX = 0;
-    let renderY = 0;
-
-    const stages = [
-      backStageRef.current,
-      frontStageRef.current,
-      occluderStageRef.current,
-    ].filter(Boolean) as HTMLElement[];
-    const layers = Array.from(
-      section.querySelectorAll<HTMLElement>("[data-eddie-layer]"),
-    );
-
-    const onReducedMotionChange = (event: MediaQueryListEvent) => {
-      reducedMotion = event.matches;
-    };
-
     const cleanupLaptop = createEddieLaptopScene({
       mount: laptopStage,
       hero: section,
       transitionRoot: section,
-      onUpdate: ({ scrollY, time, ambientStrength, mouseX, mouseY }) => {
-        if (reducedMotion) {
-          for (const layer of layers) {
-            layer.style.transform = "none";
-          }
-          for (const stage of stages) {
-            stage.style.opacity = "1";
-            stage.style.transform = "none";
-          }
-          return;
-        }
-
-        renderX += (mouseX - renderX) * HOVER_EASE;
-        renderY += (mouseY - renderY) * HOVER_EASE;
-
-        const takeover = smooth(
-          clamp((scrollY - TAKEOVER_START) / (TAKEOVER_END - TAKEOVER_START), 0, 1),
-        );
-        const scrollFade = 1 - takeover;
-
-        const maxSwayX = 0.12;
-        const maxSwayY = 0.08;
-        const swayX = Math.sin(time) * maxSwayX * ambientStrength * scrollFade;
-        const swayY = Math.cos(time * 0.7) * maxSwayY * ambientStrength * scrollFade;
-
-        const totalOffsetX = renderX + swayX;
-        const totalOffsetY = renderY + swayY;
-
-        for (const layer of layers) {
-          const depth = parseNumber(layer.dataset.depth, 0);
-          const scrollDepth = parseNumber(layer.dataset.scrollDepth, depth);
-          const scrollMaxY = parseNumber(layer.dataset.scrollMaxY, Infinity);
-          const offsetX = parseNumber(layer.dataset.offsetX, 0);
-          const offsetY = parseNumber(layer.dataset.offsetY, 0);
-          const scaleModifier = parseNumber(layer.dataset.scaleModifier, 1);
-          const scrollTravelY = Math.min(scrollY * scrollDepth * 0.9, scrollMaxY);
-          const x = offsetX - totalOffsetX * depth * HOVER_X_INTENSITY;
-          const y = offsetY - totalOffsetY * depth * HOVER_Y_INTENSITY - scrollTravelY;
-          const scale = (1 + depth * 0.08) * scaleModifier;
-
-          layer.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(
-            2,
-          )}px, 0) scale(${scale})`;
-        }
-
-        for (const stage of stages) {
-          stage.style.opacity = (1 - takeover * 0.94).toFixed(3);
-          stage.style.transform = `scale(${(1 + takeover * 0.12).toFixed(3)})`;
-        }
-      },
+      stages: [
+        backStageRef.current,
+        frontStageRef.current,
+        occluderStageRef.current,
+      ],
     });
 
-    reducedMotionQuery.addEventListener("change", onReducedMotionChange);
-
     return () => {
-      reducedMotionQuery.removeEventListener("change", onReducedMotionChange);
       cleanupLaptop();
     };
   }, [isMobile]);
@@ -306,6 +250,7 @@ export default function Hero() {
             fill
             priority
             fetchPriority="high"
+            unoptimized
             sizes="100vw"
             className="object-cover"
           />

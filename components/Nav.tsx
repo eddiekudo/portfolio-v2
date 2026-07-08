@@ -29,6 +29,7 @@ export default function Nav() {
         <nav className="relative flex h-11 items-center justify-between px-3 md:px-6">
           {/* Mobile Menu Button */}
           <button
+            type="button"
             onClick={() => setIsOpen(!isOpen)}
             className="flex min-h-[44px] min-w-[44px] items-center justify-center text-xs font-bold uppercase tracking-wider text-white md:hidden z-50 focus:outline-none cursor-pointer"
             aria-label="Toggle navigation menu"
