@@ -110,7 +110,11 @@ const parseNumber = (value: string | undefined, fallback: number) => {
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
-function EddieImageLayer({ layer }: { layer: EddieLayer }) {
+function EddieImageLayer({ layer, isTabletPortrait }: { layer: EddieLayer; isTabletPortrait?: boolean }) {
+  const src = isTabletPortrait
+    ? layer.src.replace(/\.webp$/, "-tablet.webp")
+    : layer.src;
+
   return (
     <div
       className="layer overflow-hidden"
@@ -118,18 +122,18 @@ function EddieImageLayer({ layer }: { layer: EddieLayer }) {
       data-depth={layer.depth}
       data-scroll-depth={layer.scrollDepth}
       data-scroll-max-y={layer.scrollMaxY}
-      data-offset-x={layer.offsetX}
-      data-offset-y={layer.offsetY}
+      data-offset-x={isTabletPortrait ? undefined : layer.offsetX}
+      data-offset-y={isTabletPortrait ? undefined : layer.offsetY}
       data-scale-modifier={layer.scaleModifier}
     >
       <Image
-        src={layer.src}
+        src={src}
         alt=""
         fill
         sizes="100vw"
         className="object-cover"
         style={{
-          objectPosition: `${layer.positionX ?? "center"} ${layer.positionY ?? "center"}`
+          objectPosition: isTabletPortrait ? "center center" : `${layer.positionX ?? "center"} ${layer.positionY ?? "center"}`
         }}
       />
     </div>
@@ -145,12 +149,20 @@ export default function Hero() {
   const animationFrameRef = useRef<HTMLDivElement>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTabletPortrait, setIsTabletPortrait] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setIsMobile(width < 768);
+      setIsTabletPortrait(
+        width >= 768 &&
+        width <= 1024 &&
+        height > width
+      );
     };
     checkMobile();
     window.addEventListener("resize", checkMobile, { passive: true });
@@ -301,16 +313,16 @@ export default function Hero() {
 
         <div ref={backStageRef} className="stage stage-back">
           {backLayers.map((layer) => (
-            <EddieImageLayer key={layer.src} layer={layer} />
+            <EddieImageLayer key={layer.src} layer={layer} isTabletPortrait={isTabletPortrait} />
           ))}
         </div>
 
-        {isMounted && !isMobile && (
+        {isMounted && !isMobile && !isTabletPortrait && (
           <ImageTrail
             containerRef={animationFrameRef}
             images={stickerImages}
             zIndexStart={2}
-            enabled={!isMobile}
+            enabled={!isMobile && !isTabletPortrait}
           />
         )}
 
@@ -318,12 +330,12 @@ export default function Hero() {
 
         <div ref={frontStageRef} className="stage stage-front">
           {frontLayers.map((layer) => (
-            <EddieImageLayer key={layer.src} layer={layer} />
+            <EddieImageLayer key={layer.src} layer={layer} isTabletPortrait={isTabletPortrait} />
           ))}
         </div>
 
         <div ref={occluderStageRef} className="stage stage-occluder">
-          <EddieImageLayer layer={occluderLayer} />
+          <EddieImageLayer layer={occluderLayer} isTabletPortrait={isTabletPortrait} />
         </div>
 
         <div 

@@ -123,14 +123,14 @@ body {
   height: 100% !important;
 }
 
-@media (max-aspect-ratio: 7/5) and (min-width: 768px) {
+@media (orientation: portrait) and (max-aspect-ratio: 7/5) and (min-width: 768px) and (max-width: 1024px) {
   .stage-front,
   .stage-occluder,
   .laptop-stage {
-    aspect-ratio: 16/9 !important;
+    aspect-ratio: auto !important;
     width: 100% !important;
-    height: auto !important;
-    top: auto !important;
+    height: 100% !important;
+    top: 0 !important;
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
@@ -138,31 +138,50 @@ body {
   }
 
   .stage-front .layer,
-  .stage-occluder .layer {
-    inset: 0 !important;
-    background-size: contain !important;
+  .stage-occluder .layer,
+  .stage-back .layer {
+    inset: -4% !important;
+    background-size: cover !important;
   }
 
-  /* Layer 5 (left skyscraper) - 80% height, bottom-left */
-  .stage-front div[style*="5.webp"] {
-    background-size: auto 80% !important;
-    background-position: left bottom !important;
-  }
-
-  /* Layer 4 (mid buildings) - 100% height, center-bottom */
-  .stage-front div[style*="4.webp"] {
-    background-size: auto 100% !important;
-    background-position: center bottom !important;
-  }
-
-  /* Compact text sizes and bottom-left placement for all tablets */
   .hero-reveal-text {
-    font-size: 2rem !important;
+    font-size: 3.25rem !important;
+    line-height: 1.35 !important;
+    font-weight: 400 !important;
   }
 
   .hero-text-container {
-    bottom: 6% !important;
-    max-width: 45% !important;
+    bottom: 8% !important;
+    left: 6% !important;
+    max-width: 65% !important;
+  }
+
+  .image-trail {
+    display: none !important;
+  }
+
+  .avatar-wrapper {
+    width: 3.75rem !important;
+    height: 3.75rem !important;
+  }
+
+  .avatar-inner {
+    width: 3.75rem !important;
+  }
+
+  .avatar-img {
+    width: 3.75rem !important;
+    height: 3.75rem !important;
+  }
+
+  .arrow-wrapper {
+    width: 2.25rem !important;
+    height: 3.75rem !important;
+  }
+
+  .arrow-svg {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
   }
 }
 
