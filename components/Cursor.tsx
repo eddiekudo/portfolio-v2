@@ -31,105 +31,75 @@ export default function Cursor() {
       ease: "power3",
     });
 
-    let isHoveringClickable = false;
+    let currentHoverLabel: string | null = null;
     gsap.set(cursorBubble, { rotation: -30 });
+
+    const updateHoverState = (label: string) => {
+      if (currentHoverLabel === label) return;
+      currentHoverLabel = label;
+
+      cursorBubble.textContent = label;
+      gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
+      gsap.to(cursorBubble, {
+        opacity: 1,
+        scale: 1,
+        rotation: 0,
+        duration: 1.7,
+        delay: 0.1,
+        ease: "elastic.out(1, 0.4)",
+      });
+    };
+
+    const resetHoverState = () => {
+      if (currentHoverLabel === null) return;
+      currentHoverLabel = null;
+
+      gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
+      gsap.to(cursorBubble, {
+        opacity: 1,
+        scale: 0,
+        rotation: -30,
+        duration: 0.3,
+        ease: "sine.inOut",
+      });
+    };
+
+    const checkHover = (target: HTMLElement | null) => {
+      if (!target) {
+        resetHoverState();
+        return;
+      }
+
+      const interactiveEl = target.closest("[data-cursor]") as HTMLElement | null;
+      if (interactiveEl) {
+        const label = interactiveEl.getAttribute("data-cursor") || "click";
+        updateHoverState(label);
+        return;
+      }
+
+      const defaultClickable = target.closest("a, button, [role='button']") as HTMLElement | null;
+      if (defaultClickable) {
+        updateHoverState("click");
+        return;
+      }
+
+      resetHoverState();
+    };
 
     const onMouseMove = (e: MouseEvent) => {
       // Offset the bubble slightly from the pointer tip
       xTo(e.clientX + 13);
       yTo(e.clientY - 43);
 
-      // Check if cursor is over 3D Spiral Showcase
-      const target = e.target as HTMLElement;
-      const spiralStage = target.closest(".spiral-stage") as HTMLElement | null;
-
-      if (spiralStage) {
-        // If the computed cursor is 'pointer', we are hovering a 3D mesh project card
-        const isOverMesh = window.getComputedStyle(spiralStage).cursor === "pointer";
-        if (isOverMesh && !isHoveringClickable) {
-          isHoveringClickable = true;
-          cursorBubble.textContent = "view";
-          gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
-          gsap.to(cursorBubble, {
-            opacity: 1,
-            scale: 1,
-            rotation: 0,
-            duration: 1.7,
-            delay: 0.1,
-            ease: "elastic.out(1, 0.4)",
-          });
-        } else if (!isOverMesh && isHoveringClickable) {
-          isHoveringClickable = false;
-          gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
-          gsap.to(cursorBubble, {
-            opacity: 1,
-            scale: 0,
-            rotation: -30,
-            duration: 0.3,
-            ease: "sine.inOut",
-          });
-        }
-      }
+      checkHover(e.target as HTMLElement);
     };
 
     const onMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      
-      // Exclude the 3D stage itself, which is handled dynamically in mousemove
-      if (target.closest(".spiral-stage")) return;
-
-      const clickableSelector =
-        "a, button, [role='button'], .spiral-fallback__card";
-      const found = target.closest(clickableSelector) as HTMLElement | null;
-
-      if (found && !isHoveringClickable) {
-        isHoveringClickable = true;
-
-        if (found.matches('a[href="#home"]') || found.textContent?.toLowerCase().includes("home")) {
-          cursorBubble.textContent = "home";
-        } else if (found.matches(".roll-btn") || found.matches('a[href^="mailto:"]')) {
-          cursorBubble.textContent = "open";
-        } else if (found.matches(".spiral-fallback__card")) {
-          cursorBubble.textContent = "view";
-        } else {
-          cursorBubble.textContent = "click";
-        }
-
-        gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
-        gsap.to(cursorBubble, {
-          opacity: 1,
-          scale: 1,
-          rotation: 0,
-          duration: 1.7,
-          delay: 0.1,
-          ease: "elastic.out(1, 0.4)",
-        });
-      } else if (!found && isHoveringClickable) {
-        isHoveringClickable = false;
-
-        gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
-        gsap.to(cursorBubble, {
-          opacity: 1,
-          scale: 0,
-          rotation: -30,
-          duration: 0.3,
-          ease: "sine.inOut",
-        });
-      }
+      checkHover(e.target as HTMLElement);
     };
 
     const onMouseLeave = () => {
-      if (isHoveringClickable) {
-        isHoveringClickable = false;
-        gsap.killTweensOf(cursorBubble, "opacity,scale,rotation");
-        gsap.to(cursorBubble, {
-          opacity: 1,
-          scale: 0,
-          rotation: -30,
-          duration: 0.3,
-          ease: "sine.inOut",
-        });
-      }
+      resetHoverState();
     };
 
     window.addEventListener("mousemove", onMouseMove);

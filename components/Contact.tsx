@@ -38,6 +38,7 @@ export default function Contact() {
           <a
             href="mailto:eddiexkudo@gmail.com"
             className="roll-btn inline-flex h-12 items-center gap-3 bg-paper px-6 text-xs font-bold uppercase text-ink"
+            data-cursor="open"
           >
             <span className="roll-label">
               <span data-text="eddiexkudo@gmail.com">eddiexkudo@gmail.com</span>

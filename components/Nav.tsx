@@ -56,6 +56,7 @@ export default function Nav() {
             href="#home"
             onClick={() => setIsOpen(false)}
             className="absolute left-1/2 -translate-x-1/2 text-xs font-bold uppercase tracking-tight text-white"
+            data-cursor="home"
           >
             AdityaRwt®
           </a>
